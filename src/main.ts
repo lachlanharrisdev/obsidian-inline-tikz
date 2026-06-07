@@ -2,12 +2,9 @@ import { Plugin } from "obsidian";
 import * as crypto from "crypto";
 import { ASSETS } from "./assets";
 import { Readable } from "stream";
-import fsModule from "fs";
-import pathModule from "path";
 
-// Cast to any to allow monkey-patching of Node built-ins
-const fs = fsModule as unknown;
-const path = pathModule as unknown;
+import type * as FS from "fs";
+import type * as Path from "path";
 
 interface TikzOptions {
     embedFontCss?: boolean;
@@ -19,43 +16,53 @@ interface TikzOptions {
     showConsole?: boolean;
 }
 
-// --- Import Workaround ---
-const nodeTikzJax = require("node-tikzjax");
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const fs = require("fs") as typeof FS;
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const path = require("path") as typeof Path;
+
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const nodeTikzJax = require("node-tikzjax") as { default?: unknown };
 const tex2svg = (nodeTikzJax.default || nodeTikzJax) as (
     source: string,
     options?: TikzOptions,
 ) => Promise<string>;
 
-// --- WASM Path Patching ---
+const typedAssets: Record<string, string> = ASSETS;
+
 const originalReadFileSync = fs.readFileSync;
 const originalCreateReadStream = fs.createReadStream;
 
 fs.readFileSync = function (
-    filePath: string | Buffer | number | null,
-    options?: unknown,
-) {
+    filePath: Parameters<typeof originalReadFileSync>[0],
+    options?: Parameters<typeof originalReadFileSync>[1],
+): ReturnType<typeof originalReadFileSync> {
     if (typeof filePath === "string") {
         const fileName = path.basename(filePath);
-        if (ASSETS[fileName]) {
-            return Buffer.from(ASSETS[fileName], "base64");
+        const assetBase64 = typedAssets[fileName];
+        if (assetBase64) {
+            return Buffer.from(assetBase64, "base64");
         }
     }
     return originalReadFileSync(filePath, options);
-};
+} as typeof originalReadFileSync;
 
 fs.createReadStream = function (
-    filePath: string | Buffer | number | null,
-    options?: unknown,
-) {
+    filePath: Parameters<typeof originalCreateReadStream>[0],
+    options?: Parameters<typeof originalCreateReadStream>[1],
+): ReturnType<typeof originalCreateReadStream> {
     if (typeof filePath === "string") {
         const fileName = path.basename(filePath);
-        if (ASSETS[fileName]) {
-            const buffer = Buffer.from(ASSETS[fileName], "base64");
-            return Readable.from(buffer);
+        const assetBase64 = typedAssets[fileName];
+        if (assetBase64) {
+            const buffer = Buffer.from(assetBase64, "base64");
+            return Readable.from(buffer) as ReturnType<
+                typeof originalCreateReadStream
+            >;
         }
     }
     return originalCreateReadStream(filePath, options);
-};
+} as typeof originalCreateReadStream;
 
 export default class TikzPlugin extends Plugin {
     private cache: Map<string, string> = new Map();
