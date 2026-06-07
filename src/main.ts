@@ -1,30 +1,38 @@
 import { Plugin } from "obsidian";
 import * as crypto from "crypto";
-import { ASSETS, FONTS_CSS } from "./assets";
+import { ASSETS } from "./assets";
 import { Readable } from "stream";
+import fsModule from "fs";
+import pathModule from "path";
 
-// Use CommonJS require for fs and path to allow monkey-patching and avoid bundling issues
-const fs = require("fs");
-const path = require("path");
+// Cast to any to allow monkey-patching of Node built-ins
+const fs = fsModule as unknown;
+const path = pathModule as unknown;
+
+interface TikzOptions {
+    embedFontCss?: boolean;
+    fontCssUrl?: string;
+    texPackages?: Record<string, string>;
+    tikzLibraries?: string[];
+    addToPreamble?: string;
+    tikzOptions?: string;
+    showConsole?: boolean;
+}
 
 // --- Import Workaround ---
-// Handle ESM/CommonJS interop for node-tikzjax
 const nodeTikzJax = require("node-tikzjax");
 const tex2svg = (nodeTikzJax.default || nodeTikzJax) as (
     source: string,
-    options?: any,
+    options?: TikzOptions,
 ) => Promise<string>;
 
 // --- WASM Path Patching ---
-// Since node-tikzjax is a Node library bundled into an Obsidian plugin,
-// it expects files on disk. We monkey-patch fs.readFileSync and fs.createReadStream
-// to serve embedded base64 assets instead.
 const originalReadFileSync = fs.readFileSync;
 const originalCreateReadStream = fs.createReadStream;
 
 fs.readFileSync = function (
     filePath: string | Buffer | number | null,
-    options?: any,
+    options?: unknown,
 ) {
     if (typeof filePath === "string") {
         const fileName = path.basename(filePath);
@@ -37,7 +45,7 @@ fs.readFileSync = function (
 
 fs.createReadStream = function (
     filePath: string | Buffer | number | null,
-    options?: any,
+    options?: unknown,
 ) {
     if (typeof filePath === "string") {
         const fileName = path.basename(filePath);
@@ -56,17 +64,13 @@ export default class TikzPlugin extends Plugin {
         source: string;
         hash: string;
         resolve: (value: string) => void;
-        reject: (reason: any) => void;
+        reject: (reason: unknown) => void;
     }> = [];
 
     async onload() {
-        console.log("Loading Obsidian TikZ plugin...");
-
-        await this.loadFonts();
-
         this.registerMarkdownCodeBlockProcessor(
             "tikz",
-            async (source, el, ctx) => {
+            async (source, el, _ctx) => {
                 const hash = crypto
                     .createHash("sha256")
                     .update(source)
@@ -87,24 +91,13 @@ export default class TikzPlugin extends Plugin {
         );
     }
 
-    private async loadFonts() {
-        try {
-            const style = document.createElement("style");
-            style.id = "tikzjax-fonts";
-            style.textContent = FONTS_CSS;
-            document.head.appendChild(style);
-        } catch (e) {
-            console.error("TikZ Plugin: Failed to load embedded fonts", e);
-        }
-    }
-
     private async enqueueCompilation(
         source: string,
         hash: string,
     ): Promise<string> {
         return new Promise((resolve, reject) => {
             this.compilationQueue.push({ source, hash, resolve, reject });
-            this.processQueue();
+            void this.processQueue();
         });
     }
 
@@ -118,7 +111,6 @@ export default class TikzPlugin extends Plugin {
 
         if (item) {
             try {
-                // Re-check cache in case it was filled while waiting
                 if (this.cache.has(item.hash)) {
                     item.resolve(this.cache.get(item.hash)!);
                 } else {
@@ -129,7 +121,7 @@ export default class TikzPlugin extends Plugin {
                 item.reject(e);
             } finally {
                 this.isCompiling = false;
-                this.processQueue();
+                void this.processQueue();
             }
         } else {
             this.isCompiling = false;
@@ -137,25 +129,23 @@ export default class TikzPlugin extends Plugin {
     }
 
     private async compileTikz(source: string, hash: string): Promise<string> {
-        try {
-            // Since fonts are injected into document.head, no need for embedFontCss
-            const svg = await tex2svg(source);
-
-            this.cache.set(hash, svg);
-            return svg;
-        } catch (e) {
-            throw e;
-        }
+        const svg = await tex2svg(source);
+        this.cache.set(hash, svg);
+        return svg;
     }
 
     private renderSvg(el: HTMLElement, svg: string) {
         const container = el.createDiv({ cls: "tikz-container" });
-        container.innerHTML = svg;
+        const parser = new DOMParser();
+        const doc = parser.parseFromString(svg, "image/svg+xml");
+        if (doc.documentElement) {
+            container.appendChild(doc.documentElement);
+        }
     }
 
-    private renderError(el: HTMLElement, error: any) {
+    private renderError(el: HTMLElement, error: unknown) {
         const errorBox = el.createDiv({ cls: "tikz-error" });
-        errorBox.createEl("strong", { text: "TikZ Compilation Error:" });
+        errorBox.createEl("strong", { text: "Tikz compilation error:" });
         errorBox.createDiv({
             text: error instanceof Error ? error.message : String(error),
             cls: "tikz-error-message",
