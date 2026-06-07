@@ -16,12 +16,15 @@ interface TikzOptions {
     showConsole?: boolean;
 }
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+// required for this method of monkey-patching
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const fs = require("fs") as typeof FS;
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+// required for this method of monkey-patching
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const path = require("path") as typeof Path;
 
-// eslint-disable-next-line @typescript-eslint/no-var-requires
+// required for thsi method of monkey-patching
+// eslint-disable-next-line @typescript-eslint/no-require-imports
 const nodeTikzJax = require("node-tikzjax") as { default?: unknown };
 const tex2svg = (nodeTikzJax.default || nodeTikzJax) as (
     source: string,
@@ -47,10 +50,10 @@ fs.readFileSync = function (
     return originalReadFileSync(filePath, options);
 } as typeof originalReadFileSync;
 
-fs.createReadStream = function (
+fs.createReadStream = (
     filePath: Parameters<typeof originalCreateReadStream>[0],
     options?: Parameters<typeof originalCreateReadStream>[1],
-): ReturnType<typeof originalCreateReadStream> {
+): ReturnType<typeof originalCreateReadStream> => {
     if (typeof filePath === "string") {
         const fileName = path.basename(filePath);
         const assetBase64 = typedAssets[fileName];
@@ -62,7 +65,7 @@ fs.createReadStream = function (
         }
     }
     return originalCreateReadStream(filePath, options);
-} as typeof originalCreateReadStream;
+};
 
 export default class TikzPlugin extends Plugin {
     private cache: Map<string, string> = new Map();
@@ -143,8 +146,14 @@ export default class TikzPlugin extends Plugin {
 
     private renderSvg(el: HTMLElement, svg: string) {
         const container = el.createDiv({ cls: "tikz-container" });
+
+        const processedSvg = svg.replace(
+            /#000000|#000|\bblack\b|rgb\(\s*0\s*,\s*0\s*,\s*0\s*\)|rgba\(\s*0\s*,\s*0\s*,\s*0\s*,\s*[\d.]+\s*\)/gi,
+            "currentColor",
+        );
+
         const parser = new DOMParser();
-        const doc = parser.parseFromString(svg, "image/svg+xml");
+        const doc = parser.parseFromString(processedSvg, "image/svg+xml");
         if (doc.documentElement) {
             container.appendChild(doc.documentElement);
         }
