@@ -30,6 +30,11 @@ data.json
 # contains encoded assets for esbuild
 src/assets.ts
 
+# generated stylesheet artifact
+styles.css
+# just make the exception explicit
+!src/styles.css
+
 # TEMPORARY
 # =========
 

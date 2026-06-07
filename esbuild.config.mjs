@@ -40,12 +40,11 @@ async function generateAssets() {
     const assetsContent = `export const ASSETS = ${JSON.stringify(assets, null, 2)};\nexport const FONTS_CSS = \`${fontsCss.replace(/`/g, '\\`')} \`;`;
     fs.writeFileSync('src/assets.ts', assetsContent);
     
-    // Append fonts to styles.css
+    // Generate styles.css from source CSS + fonts
+    const srcStylesPath = path.join('src', 'styles.css');
     const stylesPath = path.join(buildDir, 'styles.css');
-    if (fs.existsSync(stylesPath)) {
-        const currentStyles = fs.readFileSync(stylesPath, 'utf8');
-        fs.writeFileSync(stylesPath, currentStyles + '\n' + fontsCss);
-    }
+    const srcCss = fs.existsSync(srcStylesPath) ? fs.readFileSync(srcStylesPath, 'utf8') : '';
+    fs.writeFileSync(stylesPath, srcCss + '\n' + fontsCss);
     
     console.log('Generated src/assets.ts and updated styles.css');
 }

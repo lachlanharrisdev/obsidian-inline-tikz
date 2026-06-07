@@ -1,0 +1,30 @@
+.tikz-container {
+    display: flex;
+    justify-content: center;
+    margin: 1em 0;
+    overflow: auto;
+}
+
+.tikz-container svg {
+    max-width: 100%;
+    height: auto;
+    fill: currentColor;
+    stroke: currentColor;
+}
+
+.tikz-error {
+    border: 2px solid #ff5555;
+    background-color: rgba(255, 85, 85, 0.1);
+    color: #ff5555;
+    padding: 10px;
+    border-radius: 4px;
+    font-family: monospace;
+    margin: 1em 0;
+    white-space: pre-wrap;
+}
+
+.tikz-error-message {
+    margin-top: 5px;
+    font-size: 0.9em;
+    opacity: 0.9;
+}
