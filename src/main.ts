@@ -16,21 +16,21 @@ interface TikzOptions {
     showConsole?: boolean;
 }
 
-// required for this method of monkey-patching
-// eslint-disable-next-line @typescript-eslint/no-require-imports
+// eslint-disable-next-line @typescript-eslint/no-require-imports -- required to bypass esbuild's read-only namespace
 const fs = require("fs") as typeof FS;
-// required for this method of monkey-patching
-// eslint-disable-next-line @typescript-eslint/no-require-imports
+// eslint-disable-next-line @typescript-eslint/no-require-imports -- required to bypass esbuild's read-only namespace
 const path = require("path") as typeof Path;
 
-// required for thsi method of monkey-patching
-// eslint-disable-next-line @typescript-eslint/no-require-imports
+// eslint-disable-next-line @typescript-eslint/no-require-imports -- required to bypass esbuild's read-only namespace
 const nodeTikzJax = require("node-tikzjax") as { default?: unknown };
 const tex2svg = (nodeTikzJax.default || nodeTikzJax) as (
     source: string,
     options?: TikzOptions,
 ) => Promise<string>;
 
+// a warning is triggered by the obsidian plugin scan because it assumes this
+//   is an unsafe assignment of an error types value
+// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- see above comment
 const typedAssets: Record<string, string> = ASSETS;
 
 const originalReadFileSync = fs.readFileSync;
