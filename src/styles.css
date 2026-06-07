@@ -28,3 +28,20 @@
     font-size: 0.9em;
     opacity: 0.9;
 }
+
+.tikz-rendering {
+    border: 2px solid var(--text-muted);
+    background-color: var(--background-secondary);
+    color: var(--text-muted);
+    padding: 10px;
+    border-radius: 4px;
+    font-family: monospace;
+    margin: 1em 0;
+    text-align: center;
+    animation: tikz-pulse 2s ease-in-out infinite;
+}
+
+@keyframes tikz-pulse {
+    0%, 100% { opacity: 1; }
+    50% { opacity: 0.5; }
+}

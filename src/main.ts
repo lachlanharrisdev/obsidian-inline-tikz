@@ -28,9 +28,6 @@ const tex2svg = (nodeTikzJax.default || nodeTikzJax) as (
     options?: TikzOptions,
 ) => Promise<string>;
 
-// a warning is triggered by the obsidian plugin scan because it assumes this
-//   is an unsafe assignment of an error types value
-// eslint-disable-next-line @typescript-eslint/no-unsafe-assignment -- see above comment
 const typedAssets: Record<string, string> = ASSETS;
 
 const originalReadFileSync = fs.readFileSync;
@@ -67,6 +64,11 @@ fs.createReadStream = (
     return originalCreateReadStream(filePath, options);
 };
 
+interface BlockState {
+    version: number;
+    debounceTimer: number | null;
+}
+
 export default class TikzPlugin extends Plugin {
     private cache: Map<string, string> = new Map();
     private isCompiling: boolean = false;
@@ -76,29 +78,83 @@ export default class TikzPlugin extends Plugin {
         resolve: (value: string) => void;
         reject: (reason: unknown) => void;
     }> = [];
+    private blockStates: WeakMap<HTMLElement, BlockState> = new WeakMap();
+    private debounceTimers: Set<number> = new Set();
 
     async onload() {
         this.registerMarkdownCodeBlockProcessor(
             "tikz",
-            async (source, el, _ctx) => {
-                const hash = crypto
-                    .createHash("sha256")
-                    .update(source)
-                    .digest("hex");
-
-                if (this.cache.has(hash)) {
-                    this.renderSvg(el, this.cache.get(hash)!);
-                    return;
-                }
-
-                try {
-                    const svg = await this.enqueueCompilation(source, hash);
-                    this.renderSvg(el, svg);
-                } catch (e) {
-                    this.renderError(el, e);
-                }
+            (source, el, _ctx) => {
+                this.processBlock(source, el);
             },
         );
+    }
+
+    onunload() {
+        for (const timerId of this.debounceTimers) {
+            window.clearTimeout(timerId);
+        }
+        this.debounceTimers.clear();
+        this.compilationQueue = [];
+    }
+
+    private getBlockState(el: HTMLElement): BlockState {
+        let state = this.blockStates.get(el);
+        if (!state) {
+            state = { version: 0, debounceTimer: null };
+            this.blockStates.set(el, state);
+        }
+        return state;
+    }
+
+    private processBlock(source: string, el: HTMLElement) {
+        const state = this.getBlockState(el);
+        state.version++;
+
+        if (state.debounceTimer !== null) {
+            window.clearTimeout(state.debounceTimer);
+            this.debounceTimers.delete(state.debounceTimer);
+            state.debounceTimer = null;
+        }
+
+        const hash = crypto
+            .createHash("sha256")
+            .update(source)
+            .digest("hex");
+
+        if (this.cache.has(hash)) {
+            this.renderSvg(el, this.cache.get(hash)!);
+            return;
+        }
+
+        this.renderLoading(el);
+
+        state.debounceTimer = window.setTimeout(() => {
+            this.debounceTimers.delete(state.debounceTimer!);
+            state.debounceTimer = null;
+            void this.doCompile(source, el, state.version, hash);
+        }, 200);
+        this.debounceTimers.add(state.debounceTimer);
+    }
+
+    private async doCompile(
+        source: string,
+        el: HTMLElement,
+        version: number,
+        hash: string,
+    ) {
+        try {
+            const svg = await this.enqueueCompilation(source, hash);
+            const state = this.getBlockState(el);
+            if (state.version === version && el.isConnected) {
+                this.renderSvg(el, svg);
+            }
+        } catch (e) {
+            const state = this.getBlockState(el);
+            if (state.version === version && el.isConnected) {
+                this.renderError(el, e);
+            }
+        }
     }
 
     private async enqueueCompilation(
@@ -131,7 +187,10 @@ export default class TikzPlugin extends Plugin {
                 item.reject(e);
             } finally {
                 this.isCompiling = false;
-                void this.processQueue();
+                window.setTimeout(
+                    () => void this.processQueue(),
+                    0,
+                );
             }
         } else {
             this.isCompiling = false;
@@ -144,7 +203,14 @@ export default class TikzPlugin extends Plugin {
         return svg;
     }
 
+    private renderLoading(el: HTMLElement) {
+        el.empty();
+        const box = el.createDiv({ cls: "tikz-rendering" });
+        box.createSpan({ text: "Rendering TikZ diagram..." });
+    }
+
     private renderSvg(el: HTMLElement, svg: string) {
+        el.empty();
         const container = el.createDiv({ cls: "tikz-container" });
 
         const processedSvg = svg.replace(
@@ -160,6 +226,7 @@ export default class TikzPlugin extends Plugin {
     }
 
     private renderError(el: HTMLElement, error: unknown) {
+        el.empty();
         const errorBox = el.createDiv({ cls: "tikz-error" });
         errorBox.createEl("strong", { text: "Tikz compilation error:" });
         errorBox.createDiv({
