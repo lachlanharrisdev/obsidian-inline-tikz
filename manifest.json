@@ -3,6 +3,8 @@
     "name": "Inline TikZ",
     "version": "0.1.0",
     "minAppVersion": "0.15.0",
-    "description": "Render seamless Tikz, CircuiTikz & other PGFPlots LaTeX diagrams directly in your notes.",
+    "description": "Render seamless TikZ, CircuiTikZ & other PGFPlots LaTeX diagrams directly in your notes",
+    "author": "Lachlan Harris",
+    "authorUrl": "https://www.lachlanharris.dev",
     "isDesktopOnly": true
 }
