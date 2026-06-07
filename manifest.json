@@ -1,7 +1,7 @@
 {
     "id": "inline-tikz",
     "name": "Inline TikZ",
-    "version": "0.1.0",
+    "version": "0.1.2",
     "minAppVersion": "0.15.0",
     "description": "Render seamless TikZ, CircuiTikZ & other PGFPlots LaTeX diagrams directly in your notes.",
     "author": "Lachlan Harris",
