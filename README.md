@@ -3,12 +3,12 @@
 Render seamless TikZ, CircuiTikZ & PGFPlots LaTeX diagrams directly in
 your notes.
 
-## Installation
+### Installation
 
 Search for `Inline TikZ` in *Settings → Community plugins*, then
 click install and enable.
 
-## Usage
+### Usage
 
 Wrap TikZ code in a ```` ```tikz ```` code block:
 
@@ -25,7 +25,7 @@ Wrap TikZ code in a ```` ```tikz ```` code block:
     \end{document}
     ```
 
-## Mobile support
+### Mobile support
 
 Diagrams are cached to `.tikz-cache/` in your vault. On desktop they are
 compiled and cached automatically. On mobile, cached diagrams display
@@ -35,7 +35,7 @@ diagrams.
 The cache will sync with whatever sync service you use, including
 Obsidian Sync.
 
-## Acknowledgements
+### Acknowledgements
 
 This plugin would not be possible without the help from a few key
 repositories and their maintainers:
@@ -46,8 +46,10 @@ repositories and their maintainers:
 - [node-tikzjax](https://github.com/prinsss/node-tikzjax) - the underlying
   TikZ rendering library
 
-## License
+---
 
-Copyright (c) 2026 Lachlan Harris. All Rights Reserved.
-
-This project is licensed under the MIT License. See `./LICENSE.txt`.
+> **Disclaimer**
+>
+> Copyright (c) 2026 Lachlan Harris. All Rights Reserved.
+> 
+> This project is licensed under the MIT License. See `./LICENSE.txt`.

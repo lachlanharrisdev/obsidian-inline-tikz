@@ -1,6 +1,6 @@
 {
     "name": "inline-tikz",
-    "version": "0.1.4",
+    "version": "0.2.0",
     "description": "Render seamless TikZ, CircuiTikZ & PGFPlots LaTeX diagrams directly in your notes.",
     "main": "main.js",
     "scripts": {
