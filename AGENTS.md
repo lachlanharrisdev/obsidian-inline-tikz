@@ -42,21 +42,16 @@ npm run build
 
 - **Organize code into multiple files**: Split functionality across separate modules rather than putting everything in `main.ts`.
 - Source lives in `src/`. Keep `main.ts` small and focused on plugin lifecycle (loading, unloading, registering commands).
-- **Example file structure**:
+- **Current file structure**:
     ```
     src/
       main.ts           # Plugin entry point, lifecycle management
-      settings.ts       # Settings interface and defaults
-      commands/         # Command implementations
-        command1.ts
-        command2.ts
-      ui/              # UI components, modals, views
-        modal.ts
-        view.ts
-      utils/           # Utility functions, helpers
-        helpers.ts
-        constants.ts
-      types.ts         # TypeScript interfaces and types
+      settings.ts       # Settings interface, defaults, settings tab
+      cache.ts          # Persistent diagram cache (vault adapter)
+      compile.ts        # Desktop-only TikZ compiler (guarded)
+      utils.ts          # SHA-256 hashing, color mode helpers
+      assets.ts         # Auto-generated base64 assets (gitignored)
+      styles.css        # Source CSS (gitignored build output: styles.css)
     ```
 - **Do not commit build artifacts**: Never commit `node_modules/`, `main.js`, or other generated files to version control.
 - Keep the plugin small. Avoid large dependencies. Prefer browser-compatible packages.
